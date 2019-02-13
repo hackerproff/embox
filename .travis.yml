@@ -55,6 +55,7 @@ script:
   - . ./scripts/docker/docker_rc.sh
   - dr make confload-"$TEMPLATE"
   - travis_wait run dr 'make &> build.log; tail -c 3M build.log'
+  - run dr 'make &> /dev/null' # Run make once more to get actual build status, not status of tail
   - run dr ./scripts/continuous/run.sh "$TEMPLATE"
 
 addons:
