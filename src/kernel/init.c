@@ -39,6 +39,7 @@ void kernel_start(void) {
  * further memory configuration, initialization of drivers, devices.
  */
 static void kernel_init(void) {
+	tttt
 	arch_init();
 
 	ipl_init();

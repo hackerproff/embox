@@ -11,22 +11,8 @@ env:
     # Encrypted COVERITY_SCAN_TOKEN
     - secure: KKhG29VpIOr5mq9xHptpDSfFEcSRKB8BX4e5zL0VQNJGkrNAHJ7ba+boHKEmSJJ1fZvHC18XOb886BIsn0i+lFrVymYDR8L8ca3e/k26LktnqMn76ORK1WYkD1fiRg3lX25v/j0TkoLB7pmDnMhZyGzg20675V1sHbl/KCO1LJI=
   matrix:
-    - TEMPLATE=arm/qemu
     - TEMPLATE=arm/stm32_f4
-    - TEMPLATE=arm/stm32f4cube
-    - TEMPLATE=x86/qemu
-    - TEMPLATE=x86/smp
-    - TEMPLATE=x86/user_apps
-    - TEMPLATE=x86/test/lang
-    - TEMPLATE=x86/test/fs
     - TEMPLATE=x86/test/net
-    - TEMPLATE=x86/test/packetdrill
-    - TEMPLATE=x86/test/qt-vnc
-    - TEMPLATE=sparc/qemu
-    - TEMPLATE=mips/qemu
-    - TEMPLATE=ppc/qemu
-    - TEMPLATE=microblaze/qemu
-    - TEMPLATE=usermode86/debug
 #matrix:
 #  include:
 #  - env: UNCRUSTIFY
@@ -51,11 +37,16 @@ before_script:
     fi
 
 script:
-  - set -e # make this script fail as soon as any individual command fail
   - . ./scripts/docker/docker_rc.sh
   - dr make confload-"$TEMPLATE"
-  - travis_wait run dr 'make &> build.log; tail -c 3M build.log'
-  - run dr ./scripts/continuous/run.sh "$TEMPLATE"
+  - set +e # Do not exit on failure
+  - travis_wait dr 'make &> build.log' &&
+    run dr ./scripts/continuous/run.sh "$TEMPLATE" &> test.log
+
+after_script:
+  - echo "Build and test logs. Click to expand/collapse"
+  - if [ -e build.log ]; then tail -c 3M build.log; fi
+  - if [ -e test.log ]; then tail -c 1M test.log; fi
 
 addons:
   coverity_scan:
