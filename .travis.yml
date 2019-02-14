@@ -37,16 +37,11 @@ before_script:
     fi
 
 script:
+  - set -e
   - . ./scripts/docker/docker_rc.sh
   - dr make confload-"$TEMPLATE"
-  - set +e # Do not exit on failure
-  - travis_wait dr 'make &> build.log' &&
-    run dr ./scripts/continuous/run.sh "$TEMPLATE" &> test.log
-
-after_script:
-  - echo "Build and test logs. Click to expand/collapse"
-  - if [ -e build.log ]; then tail -c 3M build.log; fi
-  - if [ -e test.log ]; then tail -c 1M test.log; fi
+  - travis_wait run dr ./scripts/continuos/build.sh
+  - run dr ./scripts/continuous/run.sh "$TEMPLATE"
 
 addons:
   coverity_scan:
