@@ -217,6 +217,13 @@ struct client_args {
 	int pptyfd[2];
 };
 
+#if !PTHEAD_USE
+void sigchild_handler(int sig) {
+	wait(NULL);
+	_exit(0);
+}
+#endif
+
 /* Shell thread for telnet */
 static void *telnetd_client_handler(struct client_args* client_args) {
 	/* Choose tmpbuff size a half of size of pbuff to make
@@ -257,6 +264,8 @@ static void *telnetd_client_handler(struct client_args* client_args) {
 		close(client_args->pptyfd[1]);
 		goto out;
 	}
+#else
+	signal(SIGCHLD, sigchild_handler);
 #endif
 	/* Preparations for select call */
 	nfds = max(client_args->sock, client_args->pptyfd[0]) + 1;
