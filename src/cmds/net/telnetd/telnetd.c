@@ -23,15 +23,18 @@
 
 #include <util/math.h>
 
-#define PTHEAD_USE 0
 
-#if PTHEAD_USE
-#include <pthread.h>
-#endif
+
 
 #include <framework/mod/options.h>
 
 #define TELNETD_MAX_CONNECTIONS OPTION_GET(NUMBER,telnetd_max_connections)
+#define TELNETD_USE_PTHEAD      OPTION_GET(NUMBER,telnetd_use_pthread)
+
+
+#if TELNETD_USE_PTHEAD
+#include <pthread.h>
+#endif
 
 /* Telnetd address bind to */
 #define TELNETD_ADDR INADDR_ANY
@@ -174,7 +177,7 @@ static inline void *shell_hnd(void* args) {
 	if (-1 == dup2(msg[1], STDERR_FILENO)) {
 		MD(printf("dup2 STDERR_FILENO error: %d\n", errno));
 	}
-#if PTHEAD_USE
+#if TELNETD_USE_PTHEAD
 	ret = system("tish");
 	if (ret != 0) {
 		printf("system return error: %d\n", ret);
@@ -217,8 +220,8 @@ struct client_args {
 	int pptyfd[2];
 };
 
-#if !PTHEAD_USE
-void sigchild_handler(int sig) {
+#if !TELNETD_USE_PTHEAD
+static void sigchild_handler(int sig) {
 	wait(NULL);
 	_exit(0);
 }
@@ -236,7 +239,7 @@ static void *telnetd_client_handler(struct client_args* client_args) {
 	int nfds;
 	fd_set readfds, writefds, exceptfds;
 	struct timeval timeout;
-#if PTHEAD_USE
+#if TELNETD_USE_PTHEAD
 	pthread_t thread;
 	int msg[3];
 #endif
@@ -253,7 +256,7 @@ static void *telnetd_client_handler(struct client_args* client_args) {
 	ignore_telnet_options(client_args->sock, client_args->pptyfd[0]);
 
 	fcntl(client_args->sock, F_SETFL, 0); /* O_NONBLOCK */
-#if PTHEAD_USE
+#if TELNETD_USE_PTHEAD
 	msg[0] = msg[1] = client_args->pptyfd[1];
 	msg[2] = client_args->sock;
 
@@ -374,7 +377,7 @@ out_kill:
 out_close:
 	close(client_args->pptyfd[0]);
 	close(client_args->sock);
-#if PTHEAD_USE
+#if TELNETD_USE_PTHEAD
 out:
 #endif
 	MD(printf("exiting from telnet_thread_handler\n"));
@@ -396,7 +399,7 @@ int main(int argc, char **argv) {
 		struct client_args client_args;
 
 		if (0 == strcmp("connection", argv[1])) {
-#if !PTHEAD_USE
+#if !TELNETD_USE_PTHEAD
 			int child_pid;
 			char *child_argv[5];
 			char client_pty[10];
@@ -408,7 +411,7 @@ int main(int argc, char **argv) {
 				close(client_args.sock);
 				_exit(0);
 			}
-#if !PTHEAD_USE
+#if !TELNETD_USE_PTHEAD
 			child_pid = vfork();
 			if (child_pid < 0) {
 				MD(printf("cannot vfork process err=%d\n", child_pid));
@@ -431,7 +434,7 @@ int main(int argc, char **argv) {
 			telnetd_client_handler(&client_args);
 			_exit(0);
 		}
-#if !PTHEAD_USE
+#if !TELNETD_USE_PTHEAD
 		if (0 == strcmp("shell", argv[1])) {
 			int msg[3];
 			msg[0] = msg[1] = atoi(argv[3]);
